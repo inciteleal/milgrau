@@ -70,7 +70,7 @@ def qlhtml(dfdict, fileinfo, rootdir_name, html_dir, version, meanrcsfigurename,
     '<img src='+ ' "../measurements/' + str(year_dir) + '/' + datemonth + '/' + date +'_'+ measperiod + '_05km_' + str(lamb[1]) + 'nm' + channelmode + '_Sao_Paulo_QL_'+ version +'.png'+' ">\n'
     '<img src='+ ' "../measurements/' + str(year_dir) + '/' + datemonth + '/' + date +'_'+ measperiod + '_15km_' + str(lamb[1]) + 'nm' + channelmode + '_Sao_Paulo_QL_'+ version +'.png'+' ">\n'
     '<img src='+ ' "../measurements/' + str(year_dir) + '/' + datemonth + '/' + date +'_'+ measperiod + '_30km_' + str(lamb[1]) + 'nm' + channelmode + '_Sao_Paulo_QL_'+ version +'.png'+' ">\n'
-    '<img src='+ ' "../measurements/' + str(year_dir) + '/' + datemonth + '/' + date +'_'+ measperiod + '_05km_' + str(lamb[2]) + 'nm' + channelmode + '_Sao_Paulo_QL_'+ version +'.png'+' ">\n'
+    '<img src='+ ' "../measurements/' + str(year_dir) + '/' + datemonth + '/' + date +'_'+ measperiod + '_05km_' + str(lamb[2]) + 'nm' + 'AN' + '_Sao_Paulo_QL_'+ version +'.png'+' ">\n'
     '<img src='+ ' "../measurements/' + str(year_dir) + '/' + datemonth + '/' + date +'_'+ measperiod + '_15km_' + str(lamb[2]) + 'nm' + 'AN' + '_Sao_Paulo_QL_'+ version +'.png'+' ">\n'
     '<img src='+ ' "../measurements/' + str(year_dir) + '/' + datemonth + '/' + date +'_'+ measperiod + '_30km_' + str(lamb[2]) + 'nm' + 'AN' + '_Sao_Paulo_QL_'+ version +'.png'+' ">\n'
     '<img src='+ ' "../measurements/' + str(year_dir) + '/' + datemonth + '/' + meanrcsfigurename +' ">\n'
