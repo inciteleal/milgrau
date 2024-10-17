@@ -5,7 +5,7 @@ aerosol optical depth values measured with the lidar and the sun-photometer
 Created on Sat Feb  5 07:51:19 2022
 @author: Fábio J. S. Lopes
 """
-
+ 
 import os
 
 import numpy as np
@@ -40,23 +40,50 @@ altitude_min = 0.0  # minimum altitude range for bacckscatter and extinction gra
 altitude_max = 30  # minimum altitude range for bacckscatter and extinction graphics
 
 
-lraerosol_month = {
-    "01": 51,
-    "02": 50,
-    "03": 59,
-    "04": 57,
-    "05": 55,
-    "06": 50,
-    "07": 48,
-    "08": 49,
-    "09": 51,
-    "10": 54,
-    "11": 51,
-    "12": 50,
-}
+lraerosol_mean = {'355':{
+'01':	75.95179420295759,
+'02':	116.0781281327432,
+'03':	93.00495168575227,
+'04':	96.04858083333747,
+'05':	81.16349118630502,
+'06':	78.26140169693433,
+'07':	78.20827262376653,
+'08':	81.14378469642025,
+'09':	84.68682233680514,
+'10':	84.87031582521946,
+'11':	91.06223890036068,
+'12':	99.3530907245606 },
+                '532':{
+'01':	58.10536753439628,
+'02':	66.06093874128817,
+'03':	61.93402744043742,
+'04':	69.49695351083719,
+'05':	62.06715278749705,
+'06':	61.72606447952922,
+'07':	58.88385500748774,
+'08':	55.05473648423215,
+'09':	55.78110226421323,
+'10':	57.83180290771037,
+'11':	57.11318566352885,
+'12':	75.16787397694915},
+                '1064':{
+'01':	35.93783019664728,
+'02':	25.519609750457224,
+'03':	35.37311522020933,
+'04':	40.763400519628036,
+'05':	39.80843067334443,
+'06':	43.757009331438276,
+'07':	36.91946966241792,
+'08':	30.85041991885892,
+'09':	29.744870737420083,
+'10':	33.443201948631724,
+'11':	30.8290633146269,
+'12':	41.432981739001136,}
+                }
 
 fileinfo, subfolderinfo = mf.readfiles_meastype(datadir_name)
-lraerosol = lraerosol_month[fileinfo[1][-6:-4]]
+month=fileinfo[0][-6:-4]
+lraerosol = lraerosol_mean[str(lamb)][month]
 
 
 altitude_min_01 = 0  # minimum altitude range for scattering ratio graphic 01
@@ -66,9 +93,6 @@ altitude_max_02 = 30  # maximum altitude range for scattering ratio graphic 02
 base_altitude = 13.8  # volcanic base plume altitude (visual)
 top_altitude = 20  # volcanic top plume altitude (visual)
 
-
-"""Reading all measurements directory"""
-fileinfo, subfolderinfo = mf.readfiles_meastype(datadir_name)
 
 for i in range(len(fileinfo)):
     preprocessedsignal = []
@@ -225,4 +249,3 @@ retrieval_plots.sr_plot(
     base_altitude,
     top_altitude,
 )
-
