@@ -83,7 +83,7 @@ def lidarmolfit(station, atmospheric_flag, filenameheader,preprocessedsignalmean
         smolsimulated = []
            
         for j in range(0,len(preprocessedsignalmean)):
-            integralmol = integrate.cumtrapz(alphamol_interp[0:j+1],altitude[0:j+1],initial=0)   
+            integralmol = integrate.cumulative_trapezoid(alphamol_interp[0:j+1],altitude[0:j+1],initial=0)   
         
         for i in range(0,len(integralmol)):
             aodmol.append(np.exp(-2*integralmol[i]))
@@ -128,7 +128,7 @@ def lidarmolfit(station, atmospheric_flag, filenameheader,preprocessedsignalmean
         smolsimulated = []
            
         for j in range(0,len(preprocessedsignalmean)):
-            integralmol = integrate.cumtrapz(alphamol_interp[0:j+1],altitude[0:j+1],initial=0)   
+            integralmol = integrate.cumulative_trapezoid(alphamol_interp[0:j+1],altitude[0:j+1],initial=0)   
         
         for i in range(0,len(integralmol)):
             aodmol.append(np.exp(-2*integralmol[i]))
