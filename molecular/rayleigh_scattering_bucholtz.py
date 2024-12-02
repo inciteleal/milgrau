@@ -41,7 +41,7 @@ https://gitlab.com/ioannis_binietoglou/lidar_molecular
 """
 
 import numpy as np
-from scipy.integrate import cumtrapz
+from scipy.integrate import cumulative_trapezoid
 
 N_s = 2.54743 * 1E+19  # Molecular number density for standard air [cm^-3]
 P_s = 1013.25  # Pressure for standard air [mbars]
