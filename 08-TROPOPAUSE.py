@@ -1,6 +1,11 @@
+"""
+This script reads files downloaded from 05-RADIODATA.py and calculates the CPT and LRT, 
+saves an .csv with the data from the chosen time period and plots profiles &/or variability
+"""
+
 import os
 from datetime import date
- 
+
 import matplotlib.dates as mdates
 import numpy as np
 import pandas as pd
@@ -219,38 +224,46 @@ def plot_tropo_temp(dados, title):
     plt.show()
 
 
-files=[]
-days=[]
-time_interval = pd.date_range(initial_date, final_date, freq = 'D')
+files = []
+days = []
+time_interval = pd.date_range(initial_date, final_date, freq="D")
 for date in time_interval:
     year = str(date.year)
     month = str(date.month)
-    if len(month)==1:
-        month='0'+month
+    if len(month) == 1:
+        month = "0" + month
     dayd = str(date.day)
-    if len(dayd)==1:
-        dayd='0'+dayd
+    if len(dayd) == 1:
+        dayd = "0" + dayd
     for rs in rstime:
         hour = rs
-        file_name=station+'_'+year+'_'+month+'_'+dayd+'_'+hour+'Z.csv'
+        file_name = (
+            station + "_" + year + "_" + month + "_" + dayd + "_" + hour + "Z.csv"
+        )
         files.append(file_name)
         days.append(date.date())
 
 
 ## Writes CSV with data
-header = ['day', 'CPT(km)', 'CPT_temp(K)', 'LRT(km)', 'LRT_temp(K)']
-with open('Tropopause.csv', 'w', encoding='UTF8') as f:
+header = ["day", "CPT(km)", "CPT_temp(K)", "LRT(km)", "LRT_temp(K)"]
+with open("Tropopause.csv", "w", encoding="UTF8") as f:
     writer = csv.writer(f)
     writer.writerow(header)
 
-    for i,file in enumerate(files):
+    for i, file in enumerate(files):
         dadoss = get_radiodata(file)
-        if dadoss!=False and len(dadoss[0])>0:
-            h,t,dt=dadoss
-            data = [days[i],CPT(h,t,dt)[0], CPT(h,t,dt)[1], LRT(h,t,dt)[0], LRT(h,t,dt)[1]]
+        if dadoss != False and len(dadoss[0]) > 0:
+            h, t, dt = dadoss
+            data = [
+                days[i],
+                CPT(h, t, dt)[0],
+                CPT(h, t, dt)[1],
+                LRT(h, t, dt)[0],
+                LRT(h, t, dt)[1],
+            ]
             writer.writerow(data)
             if profile:
-                plot_profile(h,t,dt, days[i],data)
+                plot_profile(h, t, dt, days[i], data)
 
 ## Plots
 # dados = pd.read_csv(rootdir_name + "/Tropopause.csv")
