@@ -103,12 +103,12 @@ def folder_creation(csvfiledir):
             os.makedirs(csvfiledir)
         except OSError:
             print(
-                "Creation of the CSV file directory % s failed"
+                "Creation of the file directory % s failed"
                 % Path(os.path.relpath(csvfiledir)).parts[-1]
             )
         else:
             print(
-                "Successfully created the CSV file directory % s"
+                "Successfully created the file directory % s"
                 % Path(os.path.relpath(csvfiledir)).parts[-1]
             )
 
