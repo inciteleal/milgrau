@@ -31,7 +31,7 @@ atmospheric_flag = "us_std"  # 'radiosounding' for rawinsonde data or 'us_std' f
 
 """Input data from user"""
 lamb = 532  # elastic wavelength to be analyzed (1064, 532 and 355 nm)
-glueflag = "yes"  # glueing flag --> 'yes' for glueing process, otherwise, 'no'
+glueflag = "no"  # glueing flag --> 'yes' for glueing process, otherwise, 'no'
 channelmode = "AN"  # channel mode --> analogic: 'AN' or photocounting: 'PC'
 ini_molref_alt = 5000  # initial altitude range for molecular calibration
 fin_molref_alt = 25000  # final altitude range for molecular calibration
@@ -264,24 +264,27 @@ for i in range(len(fileinfo)):
         fileinfo[i],
     )
 
-    scattering = retrieval_plots.sr_plot(
-        lamb,
-        dfdict,
-        alt,
-        altitude_scale,
-        channelmode,
-        dfglueing["glued"],
-        simulated_signal,
-        altitude_min_01,
-        altitude_max_01,
-        altitude_min_02,
-        altitude_max_02,
-        base_altitude,
-        tropopause,
-        top_altitude,
-        save_plots,
-        fileinfo[i],
-    )
+    if glueflag == "yes":
+        scattering = retrieval_plots.sr_plot(
+            lamb,
+            dfdict,
+            alt,
+            altitude_scale,
+            channelmode,
+            dfglueing["glued"],
+            simulated_signal,
+            altitude_min_01,
+            altitude_max_01,
+            altitude_min_02,
+            altitude_max_02,
+            base_altitude,
+            tropopause,
+            top_altitude,
+            save_plots,
+            fileinfo[i],
+        )
+    else:
+        scattering = np.nan
 
     # Saving backscatter and extinction profile as a csv
     df = pd.DataFrame(
