@@ -5,6 +5,7 @@ saves an .csv with the data from the chosen time period and plots profiles &/or 
 
 import os
 from datetime import date
+import csv
 
 import matplotlib.dates as mdates
 import numpy as np
@@ -26,8 +27,8 @@ sns.set_theme(font="Anonymous Pro")
 sns.set_theme()
 
 # User Input
-initial_date = "2013/01/01"  # Time range data yyyy/mm/dd
-final_date = "2023/12/31"
+initial_date = "2024/12/01"  # Time range data yyyy/mm/dd
+final_date = "2024/12/31"
 station = "83779_SBMT"  # Radiosounding Station number and identifier
 rstime = [
     "00",
@@ -35,7 +36,6 @@ rstime = [
 ]  # Radiosounding launch time (00 --> 00 UTC and 12 --> 12 UTC as string). If only one
 # launch time is desired put the time as list with one string e.g. ['00'] or ['12']
 profile = False  # True --> plots and saves day height profile, False --> doesn't plot
-# day height profile
 rawinsonde_folder = "07-rawinsonde"  # Folder containing radiosounding data
 rootdir_name = os.getcwd()
 datadir_name = os.path.join(rootdir_name, rawinsonde_folder)
@@ -244,15 +244,30 @@ for date in time_interval:
         days.append(date.date())
 
 
-## Writes CSV with data
+csv_filename = "Tropopause.csv"
 header = ["day", "CPT(km)", "CPT_temp(K)", "LRT(km)", "LRT_temp(K)"]
-with open("Tropopause.csv", "w", encoding="UTF8") as f:
+file_exists = os.path.isfile(csv_filename)
+
+existing_days = set()
+if file_exists:
+    with open(csv_filename, "r", encoding="UTF8") as f:
+        reader = csv.reader(f)
+        next(reader)
+        existing_days = {row[0] for row in reader}
+
+with open(csv_filename, "a", encoding="UTF8", newline="") as f:
     writer = csv.writer(f)
-    writer.writerow(header)
+
+    if not file_exists:
+        writer.writerow(header)
 
     for i, file in enumerate(files):
+        if str(days[i]) in existing_days:
+            print(f"Dados de {days[i]} já estão no CSV. Pulando...")
+            continue
+
         dadoss = get_radiodata(file)
-        if dadoss != False and len(dadoss[0]) > 0:
+        if dadoss is not False and len(dadoss[0]) > 0:
             h, t, dt = dadoss
             data = [
                 days[i],
@@ -262,6 +277,8 @@ with open("Tropopause.csv", "w", encoding="UTF8") as f:
                 LRT(h, t, dt)[1],
             ]
             writer.writerow(data)
+            print(f"Adicionando dados de {days[i]} ao CSV.")
+
             if profile:
                 plot_profile(h, t, dt, days[i], data)
 
