@@ -66,8 +66,8 @@ df_head["gap_nshots"] = diff_time_list
 """Condition to select bad files from original dataframe"""
 bad_file_cond = (
     (df_head["nshots"] == 0)
-    | (df_head["nshots"] < difftime * laser_freq - 5)
-    | (df_head["nshots"] > difftime * laser_freq + 5)
+    | (df_head["nshots"] < difftime * laser_freq - 10)
+    | (df_head["nshots"] > difftime * laser_freq + 10)
 )
 df_bad_files = df_head.loc[np.where(bad_file_cond)].reset_index(drop=True)
 
