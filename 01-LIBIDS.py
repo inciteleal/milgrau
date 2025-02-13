@@ -46,7 +46,7 @@ for i in range(len(fileinfo[0])):
     stop_time_obj = datetime.strptime(stop_time, "%d/%m/%Y %H:%M:%S")
     diff_time = (stop_time_obj - start_time_obj).total_seconds()
     diff_time_list.append(diff_time)
-    difftime = int(np.mean(diff_time_list))
+    difftime = round(np.mean(diff_time_list))
     start_time_obj_list.append(start_time_obj)
     stop_time_obj_list.append(stop_time_obj)
     nshots_list.append(n_shots)
