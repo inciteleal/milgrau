@@ -30,7 +30,7 @@ datadir_name = os.path.join(rootdir_name, files_dir_level1)
 atmospheric_flag = "us_std"  # 'radiosounding' for rawinsonde data or 'us_std' for US-standard atmosphere
 
 """Input data from user"""
-lamb = 532  # elastic wavelength to be analyzed (1064, 532 and 355 nm)
+lamb = 355  # elastic wavelength to be analyzed (1064, 532 and 355 nm)
 glueflag = "yes"  # glueing flag --> 'yes' for glueing process, otherwise, 'no'
 channelmode = "AN"  # channel mode --> analogic: 'AN' or photocounting: 'PC'
 ini_molref_alt = 5000  # initial altitude range for molecular calibration
@@ -286,51 +286,23 @@ for i in range(len(fileinfo)):
     else:
         scattering = np.nan
 
-    # Saving backscatter and extinction profile as a csv
+    # Saving backscatter and extinction profiles as a csv
     mf.folder_creation(fileinfo[i] + "/06-mean_profiles")
 
-    if glueflag == "yes":
-        scattering_mean = pd.DataFrame(
-            {
-                "altitude": alt["altitude"] / 1000,
-                "scattering": scattering,
-            }
-        )
-        scattering_mean.to_csv(
-            fileinfo[i]
-            + "/06-mean_profiles"
-            + "/scattering_"
-            + str(lamb)
-            + "_mean_profile.csv",
-            index=False,
-        )
+    profiles = {
+        "scattering_mean_profile.csv": scattering if glueflag == "yes" else None,
+        "backscattering_mean_profile.csv": aerosol_backscatter_smooth,
+        "extinction_mean_profile.csv": aerosol_extinction_smooth,
+    }
 
-    backscattering_mean = pd.DataFrame(
-        {
-            "altitude": alt["altitude"] / 1000,
-            "backscatter": aerosol_backscatter_smooth,
-        }
-    )
-    backscattering_mean.to_csv(
-        fileinfo[i]
-        + "/06-mean_profiles"
-        + "/backscattering_"
-        + str(lamb)
-        + "_mean_profile.csv",
-        index=False,
-    )
+    for filename, data in profiles.items():
+        if data is not None:
+            file_path = fileinfo[i] + f"/06-mean_profiles/{filename}"
 
-    extinction_mean = pd.DataFrame(
-        {
-            "altitude": alt["altitude"] / 1000,
-            "extinction": aerosol_extinction_smooth,
-        }
-    )
-    extinction_mean.to_csv(
-        fileinfo[i]
-        + "/06-mean_profiles"
-        + "/extinction_"
-        + str(lamb)
-        + "_mean_profile.csv",
-        index=False,
-    )
+            if os.path.exists(file_path):
+                existing_df = pd.read_csv(file_path)
+            else:
+                existing_df = pd.DataFrame({"altitude": alt["altitude"] / 1000})
+
+            existing_df[str(lamb)] = data
+            existing_df.to_csv(file_path, index=False)
