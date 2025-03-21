@@ -1,6 +1,6 @@
 """
 Lidar Elastic Backscatter and Extinction Analysis Routine - LEBEAR
-This script provides tools to processes the pre-analyzed data and retrieval the backscatter and extinction profiles of the atmosphere, tunning the 
+This script provides tools to processes the pre-analyzed data and retrieval the backscatter and extinction profiles of the atmosphere, tunning the
 aerosol optical depth values measured with the lidar and the sun-photometer
 Created on Sat Feb  5 07:51:19 2022
 @author: Fábio J. S. Lopes
@@ -31,7 +31,7 @@ atmospheric_flag = "us_std"  # 'radiosounding' for rawinsonde data or 'us_std' f
 
 """Input data from user"""
 lamb = 532  # elastic wavelength to be analyzed (1064, 532 and 355 nm)
-glueflag = "no"  # glueing flag --> 'yes' for glueing process, otherwise, 'no'
+glueflag = "yes"  # glueing flag --> 'yes' for glueing process, otherwise, 'no'
 channelmode = "AN"  # channel mode --> analogic: 'AN' or photocounting: 'PC'
 ini_molref_alt = 5000  # initial altitude range for molecular calibration
 fin_molref_alt = 25000  # final altitude range for molecular calibration
@@ -287,18 +287,50 @@ for i in range(len(fileinfo)):
         scattering = np.nan
 
     # Saving backscatter and extinction profile as a csv
-    df = pd.DataFrame(
+    mf.folder_creation(fileinfo[i] + "/06-mean_profiles")
+
+    if glueflag == "yes":
+        scattering_mean = pd.DataFrame(
+            {
+                "altitude": alt["altitude"] / 1000,
+                "scattering": scattering,
+            }
+        )
+        scattering_mean.to_csv(
+            fileinfo[i]
+            + "/06-mean_profiles"
+            + "/scattering_"
+            + str(lamb)
+            + "_mean_profile.csv",
+            index=False,
+        )
+
+    backscattering_mean = pd.DataFrame(
         {
             "altitude": alt["altitude"] / 1000,
-            "scattering": scattering,
             "backscatter": aerosol_backscatter_smooth,
+        }
+    )
+    backscattering_mean.to_csv(
+        fileinfo[i]
+        + "/06-mean_profiles"
+        + "/backscattering_"
+        + str(lamb)
+        + "_mean_profile.csv",
+        index=False,
+    )
+
+    extinction_mean = pd.DataFrame(
+        {
+            "altitude": alt["altitude"] / 1000,
             "extinction": aerosol_extinction_smooth,
         }
     )
-    mf.folder_creation(fileinfo[i] + "/06-mean_profiles")
-    df.to_csv(
+    extinction_mean.to_csv(
         fileinfo[i]
         + "/06-mean_profiles"
-        + "/scattering_backscatter_extinction_profile.csv",
+        + "/extinction_"
+        + str(lamb)
+        + "_mean_profile.csv",
         index=False,
     )
