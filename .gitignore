@@ -1,0 +1,7 @@
+# Ignore everything in /data, except subfolder 01-data (sample data)
+tests/data/*
+!tests/data/01-data
+#!tests/data/01-data/*
+#!tests/data/01-data/**
+
+
