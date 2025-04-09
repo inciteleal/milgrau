@@ -290,14 +290,16 @@ for i in range(len(fileinfo)):
     mf.folder_creation(fileinfo[i] + "/06-mean_profiles")
 
     profiles = {
-        "scattering_mean_profile.csv": scattering if glueflag == "yes" else None,
-        "backscattering_mean_profile.csv": aerosol_backscatter_smooth,
-        "extinction_mean_profile.csv": aerosol_extinction_smooth,
+        "_scattering_mean_profile.csv": scattering if glueflag == "yes" else None,
+        "_backscattering_mean_profile.csv": aerosol_backscatter_smooth,
+        "_extinction_mean_profile.csv": aerosol_extinction_smooth,
     }
 
     for filename, data in profiles.items():
         if data is not None:
-            file_path = fileinfo[i] + f"/06-mean_profiles/{filename}"
+            file_path = (
+                fileinfo[i] + "/06-mean_profiles/" + str(fileinfo[i][-10:]) + filename
+            )
 
             if os.path.exists(file_path):
                 existing_df = pd.read_csv(file_path)

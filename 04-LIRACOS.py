@@ -11,6 +11,10 @@ from datetime import datetime, timedelta
 from pathlib import Path
 
 import pandas as pd
+import numpy as np
+import scipy.stats as stats
+import matplotlib.pyplot as plt
+import matplotlib.colors as colors
 
 from functions import liracos_function as lrc
 from functions import milgrau_function as mf
@@ -31,11 +35,11 @@ version = "level1"
 
 """Reading all measurements directory"""
 fileinfo, subfolderinfo = mf.readfiles_meastype(datadir_name)
-
 lamb = [355, 532, 1064]
-maxscale_alt = 15000  # max scale altitude for mean RCS graphics
-maxscale_altql = 15000  # max scale altitude for quicklook RCS graphics
-channelmode = "AN"
+maxscale_alt = 30000  # max scale altitude for mean RCS graphics
+maxscale_altql = 30000  # max scale altitude for quicklook RCS graphics
+minscale_altql = 0  # min scale altitude for quicklook RCS graphics
+channelmode = "PC"
 dfmaxrcstotal = pd.DataFrame()
 dfmeanrcstotal = pd.DataFrame()
 dfminrcstotal = pd.DataFrame()
@@ -54,11 +58,13 @@ for i in range(len(fileinfo)):
     dfmaxrcs = pd.DataFrame()
     dfmeanrcs = pd.DataFrame()
     dfminrcs = pd.DataFrame()
+    print("Running file ", fileinfo[i][-10:])
 
     for j in range(len(subfolderinfo)):
         datafiles.append(
             mf.readfiles_generic(os.path.join(fileinfo[i], subfolderinfo[j]))
         )
+
         if subfolderinfo[j] == files_dir_to_read:
             for filename in datafiles[j]:
                 rcsignal.append(pd.read_csv(filename, sep=",", skiprows=range(0, 10)))
@@ -77,6 +83,16 @@ for i in range(len(fileinfo)):
                 "%Y-%m-%d %H:%M:%S"
             )
         )
+
+    mf.folder_creation(fileinfo[i] + "/06-mean_profiles")
+    rcsignalmean.insert(0, "altitude", alt)
+    rcsignalmean.to_csv(
+        fileinfo[i]
+        + "/06-mean_profiles/"
+        + str(fileinfo[i][-10:])
+        + "_rcs_mean_profile.csv",
+        index=False,
+    )
 
     yeardir = Path(os.path.relpath(filename, datadir_name)).parts[-4]
     datedir = Path(os.path.relpath(filename, datadir_name)).parts[-3]
@@ -150,6 +166,7 @@ for i in range(len(fileinfo)):
         dfminrcs[str(lamb[ii])] = [min(new_rcslambda.min())]
 
         lrc.ql(
+            rcsignalmean[str(lamb[ii]) + channelmode],
             new_rcslambda,
             alt,
             rcstime,
@@ -157,6 +174,7 @@ for i in range(len(fileinfo)):
             qlchannelmode,
             dfdict,
             maxscale_altql,
+            minscale_altql,
             fileinfo[i],
             rootdir_name,
             version,
@@ -196,7 +214,6 @@ for i in range(len(fileinfo)):
         channelmode,
         lamb,
     )
-
 
 # dfmaxrcstotal.to_csv(rcsmax_dirname, index=False, float_format="%.4f")
 # dfmeanrcstotal.to_csv(rcsmean_dirname, index=False, float_format="%.4f")
