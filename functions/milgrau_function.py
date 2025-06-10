@@ -11,7 +11,10 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-locale.setlocale(locale.LC_ALL, "en_US.UTF-8")
+try:
+    locale.setlocale(locale.LC_ALL, "en_US.UTF-8")
+except locale.Error:
+    pass
 
 
 def readfiles_libids(datadir_name):
