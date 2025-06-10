@@ -27,10 +27,10 @@ datadir_name = os.path.join(rootdir_name, files_dir_level1)
 
 """flag to calculate molecular profile """
 
-atmospheric_flag = "us_std"  # 'radiosounding' for rawinsonde data or 'us_std' for US-standard atmosphere
+atmospheric_flag = "radiosounding"  # 'radiosounding' for rawinsonde data or 'us_std' for US-standard atmosphere
 
 """Input data from user"""
-lamb = 355  # elastic wavelength to be analyzed (1064, 532 and 355 nm)
+lamb = 532  # elastic wavelength to be analyzed (1064, 532 and 355 nm)
 glueflag = "yes"  # glueing flag --> 'yes' for glueing process, otherwise, 'no'
 channelmode = "AN"  # channel mode --> analogic: 'AN' or photocounting: 'PC'
 ini_molref_alt = 5000  # initial altitude range for molecular calibration
@@ -73,17 +73,17 @@ lraerosol_mean = {
     },
     "1064": {
         "01": 35.93783019664728,
-        "02": 25.519609750457224,
+        "02": 25.51960975045722,
         "03": 35.37311522020933,
-        "04": 40.763400519628036,
+        "04": 40.76340051962803,
         "05": 39.80843067334443,
-        "06": 43.757009331438276,
+        "06": 43.75700933143827,
         "07": 36.91946966241792,
         "08": 30.85041991885892,
-        "09": 29.744870737420083,
-        "10": 33.443201948631724,
+        "09": 29.74487073742008,
+        "10": 33.44320194863172,
         "11": 30.8290633146269,
-        "12": 41.432981739001136,
+        "12": 41.43298173900113,
     },
 }
 
@@ -97,10 +97,10 @@ altitude_max_02 = 30  # maximum altitude range for scattering ratio graphic 02
 base_altitude = 13.8  # volcanic base plume altitude (visual)
 top_altitude = 30  # volcanic top plume altitude (visual)
 
-tropopause = 17  # mean CPT altitude over SP from 2013 to 2024
+# tropopause = 17  # mean CPT altitude over SP from 2013 to 2024
 
 # Comment the following lines out if you do not have tropopause.csv from 08-Tropopause yet.
-# tropos = pd.read_csv(rootdir_name + "/Tropopause.csv")
+tropos = pd.read_csv(rootdir_name + "/Tropopause.csv")
 
 
 for i in range(len(fileinfo)):
@@ -116,7 +116,7 @@ for i in range(len(fileinfo)):
     print("Running file ", fileinfo[i][-10:])
 
     # comment out if you do not have tropopause.csv from 08-Tropopause yet.
-    # tropopause = tropos.loc[tropos["day"] == date, 'CPT(km)'].iloc[0]
+    tropopause = tropos.loc[tropos["day"] == date, 'CPT(km)'].iloc[0]
 
     lraerosol = lraerosol_mean[str(lamb)][month]
 
