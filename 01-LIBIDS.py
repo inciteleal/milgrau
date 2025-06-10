@@ -6,7 +6,7 @@ laser shots. Also offers the option to convert the organized data to NETCDF file
 to be processed by Single Calculus Chain algorithm from EARLINET.
 
 @author: Fábio J. S. Lopes, Alexandre C. Yoshida and Alexandre Cacheffo Wed Dec 17 2020
-Adapted on Wed Apr 9 2025 by Luisa Mello
+Adapted on Apr2025 by Luisa Mello
 """
 
 import os
