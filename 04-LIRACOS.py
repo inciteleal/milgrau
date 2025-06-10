@@ -39,7 +39,7 @@ lamb = [355, 532, 1064]
 maxscale_alt = 30000  # max scale altitude for mean RCS graphics
 maxscale_altql = 30000  # max scale altitude for quicklook RCS graphics
 minscale_altql = 0  # min scale altitude for quicklook RCS graphics
-channelmode = "PC"
+channelmode = "AN"
 dfmaxrcstotal = pd.DataFrame()
 dfmeanrcstotal = pd.DataFrame()
 dfminrcstotal = pd.DataFrame()
@@ -114,7 +114,7 @@ for i in range(len(fileinfo)):
 
         rcslambda = rcstotal[str(lamb[ii]) + qlchannelmode].set_index(
             [pd.Index(alt["altitude"])]
-        )
+        ) 
         rcslambda.columns = rcstime
         rcsheatmap = rcslambda.T.reset_index().rename(columns={"index": "Time_UTC"})
         rcsheatmap["Time_UTC"] = pd.to_datetime(
