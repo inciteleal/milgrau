@@ -1,130 +1,166 @@
 """
 LIdar BInary Data Standardized - LIBIDS
-Script to organize raw lidar binary data into standardized folder and cleaning up spurious data, such as, temp.dat, AutoSave.dpp, 
-binary data with not accepted number of laser shots.
-Created on Wed Dec 17 06:38:50 2020
-@author: Fábio J. S. Lopes, Alexandre C. Yoshida and Alexandre Cacheffo
+Script to organize raw lidar binary data into standardized folder and cleaning up
+spurious data, such as, temp.dat, AutoSave.dpp, binary data with not accepted number of
+laser shots. Also offers the option to convert the organized data to NETCDF files format
+to be processed by Single Calculus Chain algorithm from EARLINET.
+
+@author: Fábio J. S. Lopes, Alexandre C. Yoshida and Alexandre Cacheffo Wed Dec 17 2020
+Adapted on Wed Apr 9 2025 by Luisa Mello
 """
 
 import os
 import shutil
 from datetime import datetime
 from pathlib import Path
-
 import numpy as np
 import pandas as pd
-
+from statistics import mode
 from functions.milgrau_function import readfiles_libids
+from concurrent.futures import ThreadPoolExecutor
+import glob
 
-rootdir_name = os.getcwd()
-files_dir_stand = "01-data"
-bad_files_dir = "00-bad_files_dir"
-files_dir_organized = "02-data_raw_organized"
-datadir_name = os.path.join(rootdir_name, files_dir_stand)
-fileinfo = readfiles_libids(datadir_name)
+# netcdf
+from atmospheric_lidar.licel import LicelLidarMeasurement
+from atmospheric_lidar_parameters import msp_netcdf_parameters_system565
+from atmospheric_lidar_parameters import msp_netcdf_parameters_system484
+RUN_NETCDF_CONVERSION = False
 
-start_time_obj_list = []
-stop_time_obj_list = []
-diff_time_list = []
-nshots_list = []
+ROOT_DIR = os.getcwd()
+FILES_DIR_STAND = "01-data"
+BAD_FILES_DIR = "00-bad_files_dir"
+FILES_DIR_ORGANIZED = "02-data_raw_organized"
+NETCDF_DIR = "03-netcdf_data"
 
-"""Reading binary data and its head"""
-for i in range(len(fileinfo[0])):
-    f = open(fileinfo[0][i], "rb")
-    dic = f.readline().decode("utf-8")
-    aux = []
-    """14 is the line number in the header of licel binary data - here it is needed only the 1st and 2nd lines"""
-    for j in range(3):
-        aux.append(f.readline().decode("utf-8"))
+DATADIR = os.path.join(ROOT_DIR, FILES_DIR_STAND)
+fileinfo = readfiles_libids(DATADIR)
 
-    """Reading binary data heads (2nd line) to select number of shots, start and stop time of measurements"""
-    n_shots = int(aux[1][16:21])
-    start_time = aux[0][10:29]
-    stop_time = aux[0][30:49]
-    laser_freq = int(aux[1][22:27])
-    start_time_obj = datetime.strptime(start_time, "%d/%m/%Y %H:%M:%S")
-    stop_time_obj = datetime.strptime(stop_time, "%d/%m/%Y %H:%M:%S")
-    diff_time = (stop_time_obj - start_time_obj).total_seconds()
-    diff_time_list.append(diff_time)
-    difftime = round(np.mean(diff_time_list))
-    start_time_obj_list.append(start_time_obj)
-    stop_time_obj_list.append(stop_time_obj)
-    nshots_list.append(n_shots)
+def make_dir(path):
+    if not os.path.exists(path):
+        try:
+            os.makedirs(path)
+        except OSError:
+            print(f"Creation of the file directory {path} failed")
+        else:
+            print(f"Successfully created the file directory {path}")
 
+def move_file_to_target(row, base_dir):
+    night_date = get_night_date(row.start_time)
+    target = os.path.join(
+        ROOT_DIR,
+        base_dir,
+        night_date.strftime("%Y"),
+        f"{night_date.strftime('%Y%m%d')}{row.flag_period}",
+        row.meas_type,
+    )
+    make_dir(target)
+    shutil.copy(row.filepath, target)
 
-"""Setting up Dataframe with key variables to select data"""
-df_head = pd.DataFrame()
-df_head["filepath"] = fileinfo[0]
-df_head["flag_period"] = fileinfo[1]
-df_head["meas_type"] = fileinfo[2]
-df_head["start_time"] = start_time_obj_list
-df_head["stop_time"] = stop_time_obj_list
-df_head["nshots"] = nshots_list
-df_head["gap_nshots"] = diff_time_list
+def get_night_date(dt):
+    if dt.hour < 6:
+        dt = dt - pd.Timedelta(days=1)
+    return dt
 
+def read_header(filepath):
+    with open(filepath, "rb") as f:
+        _ = f.readline().decode("utf-8")
+        lines = [f.readline().decode("utf-8") for _ in range(3)]
+    start_time_str = lines[0][10:29].strip()
+    stop_time_str = lines[0][30:49].strip()
+    n_shots = int(lines[1][16:21])
+    laser_freq = int(lines[1][22:27])
+    start_time = datetime.strptime(start_time_str, "%d/%m/%Y %H:%M:%S")
+    stop_time = datetime.strptime(stop_time_str, "%d/%m/%Y %H:%M:%S")
+    duration = (stop_time - start_time).total_seconds()
+    return start_time, stop_time, duration, n_shots, laser_freq
 
-"""Condition to select bad files from original dataframe"""
-bad_file_cond = (
-    (df_head["nshots"] == 0)
-    | (df_head["nshots"] < difftime * laser_freq - 10)
-    | (df_head["nshots"] > difftime * laser_freq + 10)
+def convert_to_netcdf():
+    for path in glob.glob(os.path.join(ROOT_DIR, FILES_DIR_ORGANIZED, "*", "*")):
+        meas_name = Path(
+            os.path.relpath(path, os.sep.join([ROOT_DIR, FILES_DIR_ORGANIZED]))
+        ).parts[1][:8]
+        meas_period = Path(
+            os.path.relpath(path, os.sep.join([ROOT_DIR, FILES_DIR_ORGANIZED]))
+        ).parts[1][8:]
+        save_id = f"{meas_name}sa{meas_period}"
+        files_meas = []
+        files_meas_dc = []
+
+        if meas_period in ["am", "pm"]:
+            print(
+                "Day time",
+                meas_period.upper(),
+                "--> Using msp_netcdf_parameters_system565",
+            )
+
+            class mspLidarMeasurement(LicelLidarMeasurement):
+                extra_netcdf_parameters = msp_netcdf_parameters_system565
+
+        else:
+            print("Night time period --> Using msp_netcdf_parameters_system484")
+
+            class mspLidarMeasurement(LicelLidarMeasurement):
+                extra_netcdf_parameters = msp_netcdf_parameters_system484
+
+        for dir_meas in os.listdir(path):
+            full_path = os.path.join(path, dir_meas)
+            for file in os.listdir(full_path):
+                if dir_meas == "measurements":
+                    files_meas.append(os.path.join(full_path, file))
+                else:
+                    files_meas_dc.append(os.path.join(full_path, file))
+
+        if files_meas:
+            my_measurement = mspLidarMeasurement(files_meas)
+            my_dark_measurement = mspLidarMeasurement(files_meas_dc)
+            my_measurement.dark_measurement = my_dark_measurement
+            my_measurement.info["Measurement_ID"] = save_id
+            my_measurement.info["Temperature"] = "25"
+            my_measurement.info["Pressure"] = "940"
+            make_dir(os.path.join(ROOT_DIR, NETCDF_DIR))
+            netcdf_path = os.path.join(ROOT_DIR, NETCDF_DIR, f"{save_id}.nc")
+            my_measurement.save_as_SCC_netcdf(netcdf_path)
+            print(f"NetCDF saved: {netcdf_path}")
+
+with ThreadPoolExecutor() as executor:
+    results = list(executor.map(read_header, fileinfo[0]))
+
+start_times, stop_times, durations, nshots_list, laser_freqs = zip(*results)
+duration = mode(durations)
+freq = mode(laser_freqs)
+
+df = pd.DataFrame(
+    {
+        "filepath": fileinfo[0],
+        "flag_period": fileinfo[1],
+        "meas_type": fileinfo[2],
+        "start_time": start_times,
+        "stop_time": stop_times,
+        "nshots": nshots_list,
+        "duration": durations,
+        "laser_freq": laser_freqs,
+    }
 )
-df_bad_files = df_head.loc[np.where(bad_file_cond)].reset_index(drop=True)
 
-"""Removing bad files from original dataframe"""
-index_cond = df_head.loc[bad_file_cond].index
-df_head.drop(index_cond, inplace=True)
-df_head.reset_index(drop=True, inplace=True)
+expected_shots = duration * freq
+bad_condition = (
+    (df["nshots"] == 0)
+    | (df["nshots"] < expected_shots - 8)
+    | (df["nshots"] > expected_shots + 8)
+)
+df_bad = df.loc[bad_condition].reset_index(drop=True)
+df_good = df.loc[~bad_condition].reset_index(drop=True)
 
-"""Moving bad files from its original directory to 00-bad_files_dir folder"""
-for i in range(len(df_bad_files["filepath"])):
-    new_bad_files_path = os.path.join(
-        rootdir_name,
-        bad_files_dir,
-        df_bad_files["start_time"][i].strftime("%Y"),
-        "".join(
-            [
-                df_bad_files["start_time"][i].strftime("%Y%m%d"),
-                df_bad_files["flag_period"][i],
-            ]
-        ),
-        df_bad_files["meas_type"][i],
+with ThreadPoolExecutor() as executor:
+    executor.map(
+        lambda row: move_file_to_target(row, BAD_FILES_DIR), df_bad.itertuples()
     )
-    if not os.path.exists(new_bad_files_path):
-        try:
-            os.makedirs(new_bad_files_path)
-        except OSError:
-            print("Creation of the bad files directory % s failed" % new_bad_files_path)
-        else:
-            print(
-                "Successfully created the bad files directory % s" % new_bad_files_path
-            )
-    shutil.copy(df_bad_files["filepath"][i], new_bad_files_path)
-
-"""Copy binary files from its original directory to 02-data_raw_organized folder to run with LIBIDS-SSC-2netcdf and LIPANCORA scripts"""
-for i in range(len(df_head["filepath"])):
-    scc_files_path = os.path.join(
-        rootdir_name,
-        files_dir_organized,
-        df_head["start_time"][i].strftime("%Y"),
-        "".join(
-            [df_head["start_time"][i].strftime("%Y%m%d"), df_head["flag_period"][i]]
-        ),
-        df_head["meas_type"][i],
+    executor.map(
+        lambda row: move_file_to_target(row, FILES_DIR_ORGANIZED), df_good.itertuples()
     )
-    if not os.path.exists(scc_files_path):
-        try:
-            os.makedirs(scc_files_path)
-        except OSError:
-            #            print ('Creation of the raw organized file directory % s failed' % scc_files_path)
-            print(
-                "Creation of the raw organized file directories % s failed"
-                % Path(os.path.relpath(scc_files_path, datadir_name)).parts[-2]
-            )
-        else:
-            #            print ('Successfully created the raw organized file directory % s' % scc_files_path)
-            print(
-                "Successfully created the raw organized file directories % s"
-                % Path(os.path.relpath(scc_files_path, datadir_name)).parts[-2]
-            )
-    shutil.copy(df_head["filepath"][i], scc_files_path)
+
+print(f"[INFO] {len(df_bad)} files in '{BAD_FILES_DIR}'")
+print(f"[INFO] {len(df_good)} files in '{FILES_DIR_ORGANIZED}'")
+
+if RUN_NETCDF_CONVERSION:
+    convert_to_netcdf()
