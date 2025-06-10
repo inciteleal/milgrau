@@ -1,69 +1,109 @@
 """
 Radiosounding data acquisition - RADIODATA
-Adapted on Mon Feb 07 09:46:18 2022
 @author: Alexandre Yoshida and Alexandre Cacheffo
-adapted by Fábio Lopes
-
+Adapted on Mon Feb 07 09:46:18 2022 by Fabio Lopes
+Adapted on 2025 by Luisa Mello
 """
 
 import os
 import urllib3
 import pandas as pd
 from bs4 import BeautifulSoup
-from datetime import  datetime
+from datetime import datetime
+import time
+import csv
 from functions import milgrau_function as mf
 
-#function to remove the first ans last line of radiosounding data
-def solve_fast(s):
-    ind1 = s.find('\n')
-    ind2 = s.rfind('\n')
-    return s[ind1+1:ind2]
-
-'''
-############### Initial setup ###############
-'''
+"""Initial setup/input"""
 rootdir_name = os.getcwd()
-rawinsonde_folder = '07-rawinsonde'
+rawinsonde_folder = "07-rawinsonde"
 datadir_name = os.path.join(rootdir_name, rawinsonde_folder)
-
-initial_date = '2024/06/20' # time range to download data yyyy/mm/dd
-final_date = '2024/06/20'
-station = '83779' # Radiosounding Station number identification
-rstime = ['00','12'] # Radiosounding launch time (00 --> 00 UTC and 12 --> 12 UTC as string). If only one launch time is desired put the time as list with one string e.g. ['00'] or ['12']
-
-time_interval = pd.date_range(initial_date, final_date, freq = 'D')
-for date in time_interval:
-    year = str(date.year)
-    month = str(date.month)
-    day = str(date.day)
-    for rs in rstime:
-        hour = rs 
-        http = urllib3.PoolManager()
-        url = 'http://weather.uwyo.edu/cgi-bin/sounding?region=samer&TYPE=TEXT%3ALIST&YEAR=' + year \
-              + '&MONTH=' + month + '&FROM=' + day + hour + '&TO=' + day + hour + '&STNM=' + station
-        radiosounde_url = http.request('GET', url)
-        
-        radiosounde_data = BeautifulSoup(radiosounde_url.data,'html.parser')  #data acquisition in html format
-
-        if radiosounde_data.find('h2') is None:
-            print('Sorry :( --> ' + BeautifulSoup(radiosounde_url.data,'lxml').get_text().split('\n')[1])
-        else:
-            print('Downloading --> ' + BeautifulSoup(radiosounde_url.data,'lxml').get_text().split('\n')[3])
-            n_line2 = solve_fast(radiosounde_data.find('pre').text).splitlines()[:-1] #data organization to save file as cvs
-            
-            # Setting file name according to date and station name and the saving folder
-            title=radiosounde_data.find('h2').text
-            datename = datetime.strptime(''.join([title.split(' ')[-1],'/',title.split(' ')[-2],'/',title.split(' ')[-3]]), '%Y/%b/%d')
-            filename = ''.join([title.split(' ')[0],'_',title.split(' ')[1],'_',datename.strftime('%Y_%m_%d'),'_',title.split(' ')[-4],'.csv'])
-            saving_folder = os.path.join(datadir_name,''.join([title.split(' ')[0],'_',title.split(' ')[1]]))
-            savingfilename = os.path.join(saving_folder,filename)
-            mf.folder_creation(saving_folder)
-            with open(savingfilename, "wt", encoding="utf-8") as csvfile:
-                csvfile.write(BeautifulSoup(radiosounde_url.data,'lxml').get_text().split('\n')[3] + '\n')
-                for line in n_line2[:]:
-                    csvfile.write(line + '\n')          
+initial_date = "2024/06/06"  # time range to download data yyyy/mm/dd
+final_date = "2024/06/07"
+station = "83779"  # Radiosounding Station number identification
+rstime = ["00", "12"]  # Radiosounding launch time ('00' and/or '12' (UTC))
+time_interval = pd.date_range(initial_date, final_date, freq="D")
 
 
+def solve_fast(s):
+    """function to remove the first ans last line of radiosounding data"""
+    ind1 = s.find("\n")
+    ind2 = s.rfind("\n")
+    return s[ind1 + 1 : ind2]
 
 
-            
+def save_log(log, log_file="log.log"):
+    """saves log of files downloaded and files with download errors"""
+
+    file_exists = os.path.isfile(log_file)
+
+    with open(log_file, "a", encoding="UTF8", newline="") as f:
+        writer = csv.writer(f)
+
+        if not file_exists:
+            writer.writerow(["date", "hour", "station", "status"])
+
+        for data in sorted(log):
+            writer.writerow(data)
+
+
+def download_radiosonde_data(date, hour, station, datadir_name, max_retries=5):
+    """attempts to download radiosonde data for a specific date and time, with retries in case of error."""
+    year, month, day = str(date.year), str(date.month), str(date.day)
+    http = urllib3.PoolManager()
+    url = f"http://weather.uwyo.edu/cgi-bin/sounding?region=samer&TYPE=TEXT%3ALIST&YEAR={year}&MONTH={month}&FROM={day}{hour}&TO={day}{hour}&STNM={station}"
+
+    for attempt in range(max_retries):
+        response = http.request("GET", url)
+        data_html = BeautifulSoup(response.data, "html.parser")
+
+        if data_html.find("h2") is None:
+            erro = BeautifulSoup(response.data, "lxml").get_text().split("\n")[1]
+            if attempt == 0:
+                print(f"Error : {erro}")
+            if "try again later" in erro.lower():
+                print(f"   Trying again... (attempt {attempt+1}/{max_retries})")
+                time.sleep(2**attempt)
+                continue
+            else:
+                return erro
+
+        title = data_html.find("h2").text
+        datename = datetime.strptime(
+            f"{title.split(' ')[-1]}/{title.split(' ')[-2]}/{title.split(' ')[-3]}",
+            "%Y/%b/%d",
+        )
+        filename = f"{title.split(' ')[0]}_{title.split(' ')[1]}_{datename.strftime('%Y_%m_%d')}_{title.split(' ')[-4]}.csv"
+        saving_folder = os.path.join(
+            datadir_name, f"{title.split(' ')[0]}_{title.split(' ')[1]}"
+        )
+        savingfilename = os.path.join(saving_folder, filename)
+
+        if os.path.exists(savingfilename):
+            print(f"Already downloaded: {filename}")
+            return "OK- downloaded"
+
+        mf.folder_creation(saving_folder)
+        with open(savingfilename, "wt", encoding="utf-8") as csvfile:
+            csvfile.write(
+                BeautifulSoup(response.data, "lxml").get_text().split("\n")[3] + "\n"
+            )
+            for line in solve_fast(data_html.find("pre").text).splitlines()[:-1]:
+                csvfile.write(line + "\n")
+
+        print(f"Download successful: {filename}")
+        return "OK- downloaded"
+
+    return "Max retries for 'Please try again later.'"
+
+
+if __name__ == "__main__":
+    log = []
+    for date in time_interval:
+        for hour in rstime:
+            log_message = download_radiosonde_data(
+                date, hour, station, datadir_name, max_retries=3
+            )
+            log.append([date.strftime("%Y/%m/%d"), hour, station, log_message])
+
+    save_log(log, log_file=datadir_name + "/log.txt")
