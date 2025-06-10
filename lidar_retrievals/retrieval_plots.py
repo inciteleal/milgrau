@@ -68,7 +68,7 @@ def kfs_plot(
         + dateendstr
         + " UTC"
         + "\n Aerosol optical profiles retrieved using LR = "
-        + str(lraerosol)
+        + str(round(lraerosol))
         + " sr"
     )
 
@@ -131,7 +131,7 @@ def kfs_plot(
     if save_plots:
         mf.folder_creation(fileinfo + "/07-lebear_plots")
         plt.savefig(
-            fileinfo + "/07-lebear_plots/" + "kfs_" + fileinfo[-10:],
+            fileinfo + "/07-lebear_plots/" + "kfs_" + fileinfo[-10:] + ".png",
             bbox_inches="tight",
             transparent=None,
             dpi="figure",
@@ -295,7 +295,7 @@ def sr_plot(
     if save_plots:
         mf.folder_creation(fileinfo + "/07-lebear_plots")
         plt.savefig(
-            fileinfo + "/07-lebear_plots/" + "sr_" + fileinfo[-10:],
+            fileinfo + "/07-lebear_plots/" + "sr_" + fileinfo[-10:] + ".png",
             bbox_inches="tight",
             transparent=None,
             dpi="figure",
