@@ -7,8 +7,8 @@ import collections
 import numpy as np
 import pytz
 
-from generic import BaseLidarMeasurement, LidarChannel
-from diva import DivaConverterMixin
+from .generic import BaseLidarMeasurement, LidarChannel
+from .diva import DivaConverterMixin
 
 logger = logging.getLogger(__name__)
 
@@ -62,7 +62,7 @@ class LicelChannelData:
             self.discriminator = float(self.raw_info['discriminator']) * 1000  # Analog range in mV
         else:
             self.discriminator = float(self.raw_info['discriminator'])
-            
+
     @property
     def is_photodiode(self):
         return self.id[0:2] == 'PD'
@@ -122,7 +122,7 @@ class LicelChannelData:
         elif self.analog_photon == '3':
             string = 'std_ph'
         else:
-            string = str(self.analaog_photon)
+            string = str(self.analog_photon)
         return string
 
     def calculate_physical(self):
@@ -142,7 +142,7 @@ class LicelChannelData:
             ADCrange = self.discriminator  # Discriminator value already in mV
 
             if self.is_photodiode and (self.adcbits == 0):
-                logger.info(
+                logger.debug(
                     "Assuming adcbits equal 1. This is a bug in current licel format when storing photodiode data.")
                 channel_data = norm * ADCrange / (2 ** self.adcbits)
             else:
@@ -656,18 +656,16 @@ class LicelLidarMeasurement(BaseLidarMeasurement):
 
     def _get_custom_variables(self, channel_names):
 
-##        daq_ranges = np.ma.masked_all(len(channel_names))
-##        for n, channel_name in enumerate(channel_names):
-##            channel = self.channels[channel_name]
-##            if channel.is_analog:
-##                unique_values = list(set(channel.discriminator))
-##                if len(unique_values) > 1:
-##                    logger.warning(
-##                        'More than one discriminator levels for channel {0}: {1}'.format(channel_name, unique_values))
-##                daq_ranges[n] = unique_values[0]
-##            if channel.is_photon_counting: #I've included this line on May 14 in order to correct DAQ_Range values for photon-counting channel
-##                daq_ranges[n] = 0
-                
+        daq_ranges = np.ma.masked_all(len(channel_names))
+        for n, channel_name in enumerate(channel_names):
+            channel = self.channels[channel_name]
+            if channel.is_analog:
+                unique_values = list(set(channel.discriminator))
+                if len(unique_values) > 1:
+                    logger.warning(
+                        'More than one discriminator levels for channel {0}: {1}'.format(channel_name, unique_values))
+                daq_ranges[n] = unique_values[0]
+
         laser_shots = []
         for channel_name in channel_names:
             channel = self.channels[channel_name]
@@ -679,20 +677,12 @@ class LicelLidarMeasurement(BaseLidarMeasurement):
             logger.error('Could not read laser shots as an array. Maybe files contain different number of channels?')
             raise e
 
-##        params = [{
-##            "name": "DAQ_Range",
-##            "dimensions": ('channels',),
-##            "type": 'd',
-##            "values": daq_ranges,
-##        }, {
-##            "name": "Laser_Shots",
-##            "dimensions": ('time', 'channels',),
-##            "type": 'i',
-##            "values": laser_shots,
-##        },
-##        ]
-
         params = [{
+            "name": "DAQ_Range",
+            "dimensions": ('channels',),
+            "type": 'd',
+            "values": daq_ranges,
+        }, {
             "name": "Laser_Shots",
             "dimensions": ('time', 'channels',),
             "type": 'i',

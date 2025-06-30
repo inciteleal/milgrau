@@ -12,7 +12,7 @@ import logging
 
 import pytz
 
-from generic import BaseLidarMeasurement
+from .generic import BaseLidarMeasurement
 
 logger = logging.getLogger(__name__)
 

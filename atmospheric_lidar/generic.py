@@ -27,7 +27,7 @@ class BaseLidarMeasurement(object):
     
     The class assumes that the input files are consecutive, i.e. there are no measurements gaps.
     """
-    #extra_netcdf_parameters = None
+    extra_netcdf_parameters = None
 
     def __init__(self, file_list=None):
         """
