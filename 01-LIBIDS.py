@@ -5,26 +5,29 @@ spurious data, such as, temp.dat, AutoSave.dpp, binary data with not accepted nu
 laser shots. Also offers the option to convert the organized data to NETCDF files format
 to be processed by Single Calculus Chain algorithm from EARLINET.
 
-@author: Fábio J. S. Lopes, Alexandre C. Yoshida and Alexandre Cacheffo Wed Dec 17 2020
+@author: Fábio J. S. Lopes, Alexandre C. Yoshida and Alexandre Cacheffo
 Adapted on Apr2025 by Luisa Mello
 """
 
+import glob
 import os
 import shutil
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 from pathlib import Path
-import numpy as np
-import pandas as pd
 from statistics import mode
-from functions.milgrau_function import readfiles_libids
-from concurrent.futures import ThreadPoolExecutor
-import glob
+
+import pandas as pd
 
 # netcdf
 from atmospheric_lidar.licel import LicelLidarMeasurement
-from atmospheric_lidar_parameters import msp_netcdf_parameters_system565
-from atmospheric_lidar_parameters import msp_netcdf_parameters_system484
-RUN_NETCDF_CONVERSION = False
+from atmospheric_lidar_parameters import (
+    msp_netcdf_parameters_system484,
+    msp_netcdf_parameters_system565,
+)
+from functions.milgrau_function import readfiles_libids
+
+RUN_NETCDF_CONVERSION = True
 
 ROOT_DIR = os.getcwd()
 FILES_DIR_STAND = "01-data"
@@ -35,6 +38,7 @@ NETCDF_DIR = "03-netcdf_data"
 DATADIR = os.path.join(ROOT_DIR, FILES_DIR_STAND)
 fileinfo = readfiles_libids(DATADIR)
 
+
 def make_dir(path):
     if not os.path.exists(path):
         try:
@@ -43,6 +47,7 @@ def make_dir(path):
             print(f"Creation of the file directory {path} failed")
         else:
             print(f"Successfully created the file directory {path}")
+
 
 def move_file_to_target(row, base_dir):
     night_date = get_night_date(row.start_time)
@@ -56,10 +61,12 @@ def move_file_to_target(row, base_dir):
     make_dir(target)
     shutil.copy(row.filepath, target)
 
+
 def get_night_date(dt):
     if dt.hour < 6:
         dt = dt - pd.Timedelta(days=1)
     return dt
+
 
 def read_header(filepath):
     with open(filepath, "rb") as f:
@@ -73,6 +80,7 @@ def read_header(filepath):
     stop_time = datetime.strptime(stop_time_str, "%d/%m/%Y %H:%M:%S")
     duration = (stop_time - start_time).total_seconds()
     return start_time, stop_time, duration, n_shots, laser_freq
+
 
 def convert_to_netcdf():
     for path in glob.glob(os.path.join(ROOT_DIR, FILES_DIR_ORGANIZED, "*", "*")):
@@ -122,12 +130,11 @@ def convert_to_netcdf():
             my_measurement.save_as_SCC_netcdf(netcdf_path)
             print(f"NetCDF saved: {netcdf_path}")
 
+
 with ThreadPoolExecutor() as executor:
     results = list(executor.map(read_header, fileinfo[0]))
 
 start_times, stop_times, durations, nshots_list, laser_freqs = zip(*results)
-duration = mode(durations)
-freq = mode(laser_freqs)
 
 df = pd.DataFrame(
     {
@@ -142,14 +149,27 @@ df = pd.DataFrame(
     }
 )
 
-expected_shots = duration * freq
-bad_condition = (
-    (df["nshots"] == 0)
-    | (df["nshots"] < expected_shots - 8)
-    | (df["nshots"] > expected_shots + 8)
+df["meas_id"] = (
+    df["start_time"].apply(get_night_date).dt.strftime("%Y%m%d") + df["flag_period"]
 )
-df_bad = df.loc[bad_condition].reset_index(drop=True)
-df_good = df.loc[~bad_condition].reset_index(drop=True)
+df_good_list = []
+df_bad_list = []
+
+for meas_id, group in df.groupby("meas_id"):
+    duration = mode(group["duration"])
+    freq = mode(group["laser_freq"])
+
+    expected_shots = duration * freq
+    bad_condition = (
+        (group["nshots"] == 0)
+        | (group["nshots"] < expected_shots - 2e-3 * expected_shots)
+        | (group["nshots"] > expected_shots + 2e-3 * expected_shots)
+    )
+    df_bad_list.append(group.loc[bad_condition])
+    df_good_list.append(group.loc[~bad_condition])
+
+df_bad = pd.concat(df_bad_list).reset_index(drop=True)
+df_good = pd.concat(df_good_list).reset_index(drop=True)
 
 with ThreadPoolExecutor() as executor:
     executor.map(
@@ -159,8 +179,8 @@ with ThreadPoolExecutor() as executor:
         lambda row: move_file_to_target(row, FILES_DIR_ORGANIZED), df_good.itertuples()
     )
 
-print(f"[INFO] {len(df_bad)} files in '{BAD_FILES_DIR}'")
-print(f"[INFO] {len(df_good)} files in '{FILES_DIR_ORGANIZED}'")
+print(f"[INFO] {len(df_bad)} files moved to '{BAD_FILES_DIR}'")
+print(f"[INFO] {len(df_good)} files moved to '{FILES_DIR_ORGANIZED}'")
 
 if RUN_NETCDF_CONVERSION:
     convert_to_netcdf()
