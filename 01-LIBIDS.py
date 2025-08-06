@@ -63,7 +63,7 @@ def move_file_to_target(row, base_dir):
 
 
 def get_night_date(dt):
-    if dt.hour < 6:
+    if dt.hour < 9:
         dt = dt - pd.Timedelta(days=1)
     return dt
 
