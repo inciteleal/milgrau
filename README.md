@@ -7,8 +7,5 @@ Biblioteca com funções para processamento dos dados lidar gerados com equipame
 06. LEBEAR -> Lidar Elastic Backscatter and Extinction Analysis Routine
 07. LIRABEAR -> LIdar RAman Backscatter and Extinction Analysis Routine
 
-## Como utilizar
-Descrever como deve ser utilizado os scripts
-### Estrutura de diretórios
-Descrever estrutura de diretorios para utilizar 
+
 
