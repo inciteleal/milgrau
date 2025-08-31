@@ -18,18 +18,11 @@ from functions import milgrau_function as mf
 rootdir_name = os.getcwd()
 rawinsonde_folder = "07-rawinsonde"
 datadir_name = os.path.join(rootdir_name, rawinsonde_folder)
-initial_date = "2024/06/06"  # time range to download data yyyy/mm/dd
-final_date = "2024/06/07"
+initial_date = "2024/09/01"  # time range to download data yyyy/mm/dd
+final_date = "2024/09/02"
 station = "83779"  # Radiosounding Station number identification
 rstime = ["00", "12"]  # Radiosounding launch time ('00' and/or '12' (UTC))
 time_interval = pd.date_range(initial_date, final_date, freq="D")
-
-
-def solve_fast(s):
-    """function to remove the first ans last line of radiosounding data"""
-    ind1 = s.find("\n")
-    ind2 = s.rfind("\n")
-    return s[ind1 + 1 : ind2]
 
 
 def save_log(log, log_file="log.log"):
@@ -84,12 +77,26 @@ def download_radiosonde_data(date, hour, station, datadir_name, max_retries=5):
             return "OK- downloaded"
 
         mf.folder_creation(saving_folder)
-        with open(savingfilename, "wt", encoding="utf-8") as csvfile:
-            csvfile.write(
-                BeautifulSoup(response.data, "lxml").get_text().split("\n")[3] + "\n"
-            )
-            for line in solve_fast(data_html.find("pre").text).splitlines()[:-1]:
-                csvfile.write(line + "\n")
+        
+        data_block = data_html.find("pre").text
+        lines = data_block.strip().split('\n')
+        header = []
+        data_lines = []
+        
+        for i, line in enumerate(lines):
+            if 'PRES' in line and 'HGHT' in line:
+                header = line.strip().split()
+            elif 'hPa' in line and 'm' in line:
+                continue # skip unit line
+            elif header and not line.strip() == "-----------------------------------------------------------------------------":
+                data_lines.append(line.strip().split())
+        
+        with open(savingfilename, 'wt', encoding='utf-8', newline='') as csvfile:
+            writer = csv.writer(csvfile)
+            writer.writerow(header)
+            for row_data in data_lines:
+                if len(row_data) >= len(header):
+                    writer.writerow(row_data)
 
         print(f"Download successful: {filename}")
         return "OK- downloaded"
