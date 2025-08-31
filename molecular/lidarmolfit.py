@@ -46,7 +46,7 @@ def lidarmolfit(station, atmospheric_flag, filenameheader,preprocessedsignalmean
             rawinsonde_files = os.path.join(os.getcwd(),rawinsonde_folder0,rawinsonde_station,''.join([rawinsonde_station,'_',datestr,'00Z.csv']))
         
         if os.path.isfile(rawinsonde_files) == True:
-            rawinsonde = pd.read_table(rawinsonde_files, skiprows = [0, 1, 3, 4, 5], skipfooter = 0, sep = '\s+', engine = 'python')
+            rawinsonde = pd.read_csv(rawinsonde_files, sep=',')
         else:
             return print('There are no radiosounding data - try to use Atmospheric Standard Model \n change atmospheric_flag to us_std')
             
