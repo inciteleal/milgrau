@@ -173,7 +173,7 @@ df_good_list = []
 df_bad_list = []
 
 
-for (meas_id, meas_type), group in df.groupby(["meas_id"]):
+for (meas_id), group in df.groupby(["meas_id"]):
     try:
         duration = mode(group["duration"])
         freq = mode(group["laser_freq"])
