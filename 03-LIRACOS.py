@@ -40,7 +40,8 @@ channels_to_plot = [
 ]
 
 LOGO_LEAL = os.path.join(rootdir_name, "img", "logo_leal.png")
-LOGO_INCITE = os.path.join(rootdir_name, "img", "Logo_InCite_blue_site.png")
+LOGO_LALINET = os.path.join(rootdir_name, "img", "lalinet_logo2.png")
+LOGO_LICENSE = os.path.join(rootdir_name, "img", "by-nc-nd.png")
 
 # ==========================================
 # FORMATTING
@@ -72,19 +73,56 @@ def format_channel_name(raw_name):
         return raw_name 
 
 def add_footer_and_logos(fig, date_footer):
-    fig.text(0.10, 0.03, date_footer, fontsize=13, fontweight="bold", va="center")
-    fig.text(0.70, 0.03, "LEAL-IPEN-LALINET", fontweight="bold", fontsize=12, color="black", ha="right", va="center")
-    
-    if os.path.exists(LOGO_LEAL):
-        newax_logo = fig.add_axes([0.72, 0.01, 0.09, 0.06], zorder=12)
-        newax_logo.imshow(mpimg.imread(LOGO_LEAL), alpha=1, aspect="equal")
-        newax_logo.axis("off")
-        
-    if os.path.exists(LOGO_INCITE):
-        newax_incite = fig.add_axes([0.82, 0.01, 0.08, 0.06], zorder=12)
-        newax_incite.imshow(mpimg.imread(LOGO_INCITE), alpha=0.9, aspect="equal")
-        newax_incite.axis("off")
 
+    # =========================
+    # TEXT FOR QUCIKLOOK IMAGES
+    # =========================
+    fig.text(0.10, 0.03, date_footer,
+             fontsize=12, fontweight="bold", va="center")
+
+    fig.text(0.30, 0.03, "SPU-Lidar Station",
+             fontsize=12, fontweight="bold",
+             color="black", ha="right", va="center")
+
+    # =========================
+    # LOGO CONFIGURATION
+    # (simple height control)
+    # =========================
+    logos = [
+        (LOGO_LICENSE, 0.040),
+        (LOGO_LALINET,  0.070),
+        (LOGO_LEAL,    0.065),
+    ]
+
+    spacing = 0.006   # Spacing between logos
+    y_pos = 0.005     # Vertical position
+    x_right = 0.98    # Starts from the right
+
+    # =========================
+    # LOOP FOR INSERTING INFORMATION IN QUICKLOOKS
+    # =========================
+    for path, height in logos:
+
+        if not os.path.exists(path):
+            continue
+
+        img = mpimg.imread(path)
+        h, w = img.shape[:2]
+
+        # maintains proportion automatically
+        width = height * (w / h)
+
+        # CALCULATE POSITION
+        x_left = x_right - width
+
+        ax = fig.add_axes([x_left, y_pos, width, height], zorder=12)
+        ax.imshow(img)
+        ax.axis("off")
+
+        # UPDATING THE IMAGE POSITION
+        x_right = x_left - spacing
+        
+        
 # ==========================================
 #  QUICKLOOK (COLORMAP + MEAN RCS)
 # ==========================================
@@ -104,16 +142,28 @@ def plot_quicklook(data_slice, max_altitude, channel_name, ds, output_folder, fi
         cmap='jet', robust=True, vmin=0, add_colorbar=False, ax=ax0, add_labels=False
     )
     
+    
+    # garante comparação segura
+    
+    if "AN" in pretty_channel:
+        min_altitude = 0.16
+    elif "PC" in pretty_channel:
+        min_altitude = 0.5
+    else:
+        min_altitude = 0.0  # valor padrão (opcional)
+
+
     ax0.set_title(meas_title, fontsize=15, fontweight="bold", loc='Center')
     ax0.set_xlabel('Time (UTC)', fontsize=13, fontweight="bold")
     ax0.set_ylabel('Altitude (km a.g.l.)', fontsize=13, fontweight="bold")
+    ax0.set_ylim(min_altitude, max_altitude)
     ax0.xaxis.set_major_formatter(mdates.DateFormatter('%H:%M'))
     
     # mean rcs axis
     ax1 = plt.subplot(gs[1], sharey=ax0)
     
     mean_profile = data_slice.mean(dim='time')
-    smooth_profile = mean_profile.rolling(altitude=20, min_periods=1).mean()
+    smooth_profile = mean_profile.rolling(altitude=10, min_periods=1).mean()
     
     cor_linha = "black"
     if "532" in channel_name: cor_linha = "forestgreen"
@@ -190,7 +240,7 @@ def plot_global_mean_rcs(ds, output_folder, file_name_prefix):
     ax.set_xlabel("Mean RCS [a.u.]", fontsize=14, fontweight="bold")
     ax.set_ylabel("Altitude (km a.g.l.)", fontsize=14, fontweight="bold")
     ax.set_xscale("log")
-    ax.set_ylim(0, max_altitude)
+    ax.set_ylim(0.15, max_altitude)
     ax.legend(fontsize=12, loc="best")
     ax.grid(True, which='both', alpha=0.5)
     
