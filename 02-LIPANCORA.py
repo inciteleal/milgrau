@@ -5,8 +5,9 @@ corrections, and outputs Level 1 data (Corrected Lidar Data and Range Corrected 
 
 Corrections applied:
     - Deadtime correction
+    - Dark Current subtraction
     - Bin-shift correction 
-    - Background calculation and subtraction
+    - Sky Background calculation and subtraction
     - Range corrected signal
 
 @author: Fábio J. S. Lopes, Alexandre C. Yoshida, Alexandre Cacheffo, Luisa Mello
@@ -75,7 +76,7 @@ def apply_binshift(signal, shift_bins):
     return out
 
 def compute_background(signal, z, bg_low_m, bg_high_m, offset=0.0):
-    """Subtracts computed mean background noise in certain altitude range (m)"""
+    """Subtracts computed mean sky background noise in certain altitude range (m)"""
     i1 = np.searchsorted(z, bg_low_m)
     i2 = np.searchsorted(z, bg_high_m)
     if i1 > i2:
@@ -94,7 +95,9 @@ def process_file(nc_path):
     try:
         stem = Path(nc_path).stem
         year = stem[:4]
-        base_dir = Path(OUTPUT_DIR) / year / stem
+        month = stem[4:6]
+        
+        base_dir = Path(OUTPUT_DIR) / year / month / stem
         
         corrected_path = base_dir / f"{stem}_level1_corrected.nc"
         rcs_path = base_dir / f"{stem}_level1_rcs.nc"
@@ -105,7 +108,6 @@ def process_file(nc_path):
         if INCREMENTAL_PROCESSING and corrected_path.exists() and rcs_path.exists():
             return f"  -> [SKIPPED] Correction exists for: {stem}"
 
-        # Se não pulou, abre o arquivo para fazer a mágica da física
         ds = xr.open_dataset(nc_path)
         ds.load() 
 
@@ -145,9 +147,23 @@ def process_file(nc_path):
             if "ph" in ch_name.lower() and np.nanmax(sig) > 1000:
                 sig = sig / (shots * bin_time_us)
 
+            # 1. Deadtime
             sig = apply_deadtime(sig, deadtime)
+
+            # 2. Dark Current Subtraction
+            if "Background_Profile" in ds:
+                dc_data = ds["Background_Profile"].isel(channel=ch_i)
+                if "time_bck" in dc_data.dims:
+                    dc_prof = dc_data.mean(dim="time_bck").values
+                else:
+                    dc_prof = dc_data.values
+
+                sig = sig - dc_prof
+
+            # 3. Bin-shift
             sig = apply_binshift(sig, shift)
 
+            # 4. Sky Background Subtraction
             bg_low = float(bg_low_arr[ch_i]) if bg_low_arr is not None else 29000.0
             bg_high = float(bg_high_arr[ch_i]) if bg_high_arr is not None else 29999.0
             
@@ -161,7 +177,7 @@ def process_file(nc_path):
         # NETCDF CONFIGURATION
         # ==========================================
         attrs_common = dict(ds.attrs)
-        attrs_common["processing_level"] = "Level 1: PC->MHz, Deadtime, Bin-Shift, Background"
+        attrs_common["processing_level"] = "Level 1: PC->MHz, Deadtime, Dark Current, Bin-Shift, Sky Background"
         attrs_common["history"] = f"{ds.attrs.get('history', '')}\nProcessed with LIPANCORA on {datetime.now(timezone.utc).isoformat()} UTC"
 
         coords = {"time": ds["time"], "channel": ("channel", np.array(channel_names_scc)), "range": ("range", np.float32(z))}
@@ -186,7 +202,7 @@ def process_file(nc_path):
 # MAIN
 # ==========================================
 if __name__ == "__main__":
-    files = sorted(Path(INPUT_DIR).glob("*.nc"))
+    files = sorted(Path(INPUT_DIR).rglob("*.nc"))
     if not files:
         print(f"[INFO] No raw data NetCDF found in '{INPUT_DIR}'")
     else:
