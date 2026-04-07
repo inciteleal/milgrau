@@ -13,14 +13,14 @@ netCDF4>=1.6.0
 # Physics Integration & Signal Processing
 scipy>=1.10.0
 
-# Visualization & QA Plots
+# Visualization & Plots
 matplotlib>=3.7.0
 
 # Cloud Publisher (Cloudflare R2 / AWS S3)
 boto3>=1.26.0
 
 # Web Scraping (Wyoming Radiosonde)
-siphon
+siphon>=0.9.0
 
 # Configuration Management
 PyYAML>=6.0
