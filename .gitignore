@@ -1,7 +1,30 @@
-# Ignore everything in /data, except subfolder 01-data (sample data)
-tests/data/*
-!tests/data/01-data
-#!tests/data/01-data/*
-#!tests/data/01-data/**
+# ==========================================
+# Python & Environment
+# ==========================================
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+env/
+test.py
 
+# ==========================================
+# MILGRAU Data Directories 
+# ==========================================
+01-data/
+02-processed_data/
+measurements/
 
+# ==========================================
+# Logs & Temp Files
+# ==========================================
+logs/
+*.log
+*.tmp
+
+# ==========================================
+# Security & Credentials (CRITICAL)
+# ==========================================
+credentials.py
+.env
